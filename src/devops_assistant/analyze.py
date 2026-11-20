@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 
 REDACTIONS = [
@@ -51,6 +52,25 @@ def _clip(text: str, limit: int = 200_000) -> str:
     return head + "\n...[日志已截断]...\n" + tail
 
 
+def fingerprint(log: str) -> str:
+    """先脱敏，再去掉时间和提交号，得到可比较的失败指纹。"""
+    lines = []
+    for raw in redact(log).splitlines():
+        line = re.sub(r"\x1b\[[0-9;]*m", "", raw)
+        line = re.sub(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?", " ", line)
+        line = re.sub(r"\b[0-9a-f]{40}\b", "<sha>", line)
+        line = re.sub(
+            r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+            "<uuid>",
+            line,
+            flags=re.IGNORECASE,
+        )
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
 def analyze_log(log: str, provider: str = "github-actions") -> dict:
     if provider != "github-actions":
         return {
@@ -65,6 +85,7 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
             "commands_executed": False,
             "suggestions": SUGGESTIONS["unknown"],
             "redacted_log": redact(_clip(log)),
+            "fingerprint": fingerprint(log),
         }
     redacted = redact(_clip(log))
     categories = []
@@ -105,6 +126,7 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
         "commands_executed": False,
         "suggestions": SUGGESTIONS.get(primary["name"], SUGGESTIONS["unknown"]),
         "redacted_log": redacted,
+        "fingerprint": fingerprint(log),
     }
 
 
