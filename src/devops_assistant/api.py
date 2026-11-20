@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from devops_assistant.analyze import analyze_log
+from devops_assistant.analyze import analyze_log, correlate
 
 
 class DiagnoseIn(BaseModel):
@@ -57,6 +57,22 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         )
         conn.commit()
         return {"id": row["id"], "report": report}
+
+    @app.get("/api/diagnoses/groups")
+    def groups():
+        records = []
+        rows = conn.execute("SELECT id, payload_json FROM diagnoses ORDER BY created_at")
+        for row in rows:
+            payload = json.loads(row["payload_json"])
+            records.append(
+                {
+                    "id": row["id"],
+                    "primary": payload.get("primary"),
+                    "tests": payload.get("tests") or [],
+                    "fingerprint": payload.get("fingerprint"),
+                }
+            )
+        return correlate(records)
 
     @app.get("/api/diagnoses")
     def listing():

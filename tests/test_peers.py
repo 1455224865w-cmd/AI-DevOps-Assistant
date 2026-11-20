@@ -36,3 +36,17 @@ def test_ci_error_marker_does_not_run_commands():
     assert report["primary"] == "ci-error"
     assert report["commands_executed"] is False
     assert report["untrusted_commands"]
+
+
+def test_api_groups_same_fingerprint_without_running_commands():
+    from fastapi.testclient import TestClient
+    from devops_assistant.api import create_app
+
+    client = TestClient(create_app(":memory:"))
+    log = "FAILED tests/test_order.py::test_total - AssertionError\n"
+    first = client.post("/api/diagnoses", json={"log": log})
+    second = client.post("/api/diagnoses", json={"log": log})
+    assert first.json()["report"]["commands_executed"] is False
+    groups = client.get("/api/diagnoses/groups")
+    assert groups.status_code == 200
+    assert any(first.json()["id"] in item["ids"] and second.json()["id"] in item["ids"] for item in groups.json())
