@@ -1,0 +1,12 @@
+spring:
+  ai:
+    mcp:
+      client:
+        type: SYNC
+        toolcallback:
+          enabled: true
+        streamable-http:
+          connections:
+            ai-devops-assistant:
+              url: http://127.0.0.1:8004
+              endpoint: /mcp

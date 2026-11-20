@@ -7,10 +7,12 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel, Field
 
 from devops_assistant.analyze import analyze_log, correlate
+from devops_assistant.i18n import install, localize_error, negotiate, translate_payload
+from devops_assistant.mcp_server import mount
 
 
 class DiagnoseIn(BaseModel):
@@ -20,7 +22,9 @@ class DiagnoseIn(BaseModel):
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
-    app = FastAPI(title="AI DevOps Assistant", version="0.1.0")
+    app = FastAPI(title="AI DevOps Assistant", version="0.1.6")
+    install(app)
+    mount(app)
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute(
@@ -40,7 +44,8 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         return {"status": "ok"}
 
     @app.post("/api/diagnoses")
-    def create(body: DiagnoseIn):
+    def create(body: DiagnoseIn, request: Request):
+        locale = negotiate(request.headers.get("accept-language"), request.query_params.get("lang"))
         report = analyze_log(body.log, body.provider)
         row = {
             "id": uuid.uuid4().hex,
@@ -56,7 +61,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
             row,
         )
         conn.commit()
-        return {"id": row["id"], "report": report}
+        return translate_payload({"id": row["id"], "report": report}, locale)
 
     @app.get("/api/diagnoses/groups")
     def groups():
@@ -75,9 +80,15 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         return correlate(records)
 
     @app.get("/api/diagnoses")
-    def listing():
+    def listing(request: Request):
+        locale = negotiate(request.headers.get("accept-language"), request.query_params.get("lang"))
         rows = conn.execute("SELECT id, repository, provider, primary_cause, summary, created_at FROM diagnoses ORDER BY created_at DESC")
-        return [dict(row) for row in rows]
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["summary"] = localize_error(item["summary"], locale)
+            items.append(item)
+        return items
 
     return app
 
