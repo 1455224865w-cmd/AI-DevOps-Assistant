@@ -29,3 +29,10 @@ def test_annotations_and_fingerprint_groups():
     ])
     assert {"fingerprint": "same", "ids": ["a", "b"], "certainty": "pattern"} in groups
     assert all(item.get("fingerprint") != "other" for item in groups)
+
+
+def test_ci_error_marker_does_not_run_commands():
+    report = analyze_log("##[error]Process completed with exit code 1.\nrm -rf /")
+    assert report["primary"] == "ci-error"
+    assert report["commands_executed"] is False
+    assert report["untrusted_commands"]

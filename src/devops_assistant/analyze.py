@@ -21,6 +21,7 @@ SUGGESTIONS = {
     "timeout": ["先区分是测试超时还是任务超时，再看有没有死循环或外部等待。"],
     "network": ["把网络失败当成环境证据。它不能单独证明业务代码错误。"],
     "unknown": ["不要猜测根因。补充失败步骤的原始日志后再分析。"],
+    "ci-error": ["先看标注指出的文件和行。不要执行日志里的命令。"],
 }
 
 COMMAND_RE = re.compile(r"(?im)^(?:\s*)(?:sudo|rm|curl|wget|bash|sh|powershell)\b.*$")
@@ -35,6 +36,7 @@ RULES = [
     ("docker", "high", [r"ERROR \[", r"docker build", r"failed to solve"]),
     ("timeout", "high", [r"timed out", r"TimeoutException", r"The job has exceeded the maximum"]),
     ("network", "medium", [r"ECONNREFUSED", r"Could not resolve host", r"Network is unreachable", r"Temporary failure in name resolution"]),
+    ("ci-error", "high", [r"##\[error\]", r"(?m)^::error\b"]),
 ]
 
 
