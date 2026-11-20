@@ -25,3 +25,8 @@ def test_mcp_redacts_token_and_does_not_run_commands():
     assert payload["untrusted_commands"]
     spring = (ROOT / "spring-ai" / "pom-snippet.xml").read_text(encoding="utf-8")
     assert "spring-ai-starter-mcp-client" in spring
+    bootstrap = (ROOT / "spring-ai" / "application-mcp.yml").read_text(encoding="utf-8")
+    sample = (ROOT / "nacos" / "spring-mcp.yaml").read_text(encoding="utf-8")
+    assert "nacos:" in bootstrap
+    assert "127.0.0.1" not in bootstrap
+    assert "${MCP_SERVICE_URL}" in sample

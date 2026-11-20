@@ -22,7 +22,7 @@ class DiagnoseIn(BaseModel):
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
-    app = FastAPI(title="AI DevOps Assistant", version="0.1.6")
+    app = FastAPI(title="AI DevOps Assistant", version="0.1.7")
     install(app)
     mount(app)
     conn = sqlite3.connect(db_path, check_same_thread=False)
