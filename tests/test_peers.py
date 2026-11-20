@@ -13,3 +13,19 @@ def test_fingerprint_ignores_time_and_secrets():
     assert report["fingerprint"] == fingerprint(first)
     assert TOKEN not in report["redacted_log"]
     assert report["commands_executed"] is False
+
+
+def test_annotations_and_fingerprint_groups():
+    from devops_assistant.analyze import correlate
+
+    log = "::error file=src/order/Order.java,line=12::AssertionError\nFAILED tests/OrderTest.testTotal\n"
+    report = analyze_log(log)
+    assert {"path": "src/order/Order.java", "line": 12} in report["files"]
+    assert report["commands_executed"] is False
+    groups = correlate([
+        {"id": "a", "primary": "test", "tests": ["one"], "fingerprint": "same"},
+        {"id": "b", "primary": "build", "tests": ["two"], "fingerprint": "same"},
+        {"id": "c", "primary": "test", "tests": ["three"], "fingerprint": "other"},
+    ])
+    assert {"fingerprint": "same", "ids": ["a", "b"], "certainty": "pattern"} in groups
+    assert all(item.get("fingerprint") != "other" for item in groups)

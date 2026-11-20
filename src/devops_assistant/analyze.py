@@ -25,6 +25,7 @@ SUGGESTIONS = {
 
 COMMAND_RE = re.compile(r"(?im)^(?:\s*)(?:sudo|rm|curl|wget|bash|sh|powershell)\b.*$")
 FILE_RE = re.compile(r"([\w./-]+\.(?:py|java|ts|tsx|js|go|yml|yaml)):(\d+)")
+ANNOTATION_RE = re.compile(r"::error(?:\s+file=([^,\s]+),line=(\d+))?::")
 TEST_RE = re.compile(r"(?m)^FAILED\s+([^\s]+)|([\w.]+Test)\.(\w+)")
 RULES = [
     ("test", "high", [r"There were test failures", r"^FAILED ", r"Tests run:.*Failures: [1-9]", r"AssertionError"]),
@@ -98,6 +99,10 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
         if hits:
             categories.append({"name": name, "severity": severity, "evidence": hits[:3], "certainty": "pattern"})
     files = [{"path": item[0], "line": int(item[1])} for item in FILE_RE.findall(redacted)[:20]]
+    for path, line in ANNOTATION_RE.findall(redacted):
+        if path and line:
+            files.append({"path": path, "line": int(line)})
+    files = files[:20]
     tests = []
     for failed, cls, method in TEST_RE.findall(redacted):
         if failed:
@@ -140,11 +145,23 @@ def correlate(records: list[dict]) -> list[dict]:
         tests = record.get("tests") or [None]
         for name in tests:
             buckets.setdefault((primary, name), []).append(record.get("id"))
-    return [
+    groups = [
         {"primary": primary, "test": test, "ids": ids, "certainty": "pattern"}
         for (primary, test), ids in buckets.items()
         if len(ids) >= 2
     ]
+    by_fingerprint: dict[str, list] = {}
+    for record in records:
+        digest = record.get("fingerprint")
+        if not digest:
+            continue
+        by_fingerprint.setdefault(digest, []).append(record.get("id"))
+    groups.extend(
+        {"fingerprint": digest, "ids": ids, "certainty": "pattern"}
+        for digest, ids in by_fingerprint.items()
+        if len(ids) >= 2
+    )
+    return groups
 
 
 def fix_task(report: dict) -> dict:

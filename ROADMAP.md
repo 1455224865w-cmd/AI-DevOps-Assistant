@@ -29,3 +29,7 @@ GitHub Actions 日志分类、脱敏、文件和测试定位、未验证建议�
 ## 0.1.2
 
 借鉴 [FailureMemory](https://github.com/UnguisAI/failurememory) 的失败指纹：日志先脱敏，再去掉时间和提交号。指纹用于比较同一种失败，不触发重跑。
+
+## 0.1.3
+
+error 标注和失败指纹都来自脱敏后的日志。
