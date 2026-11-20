@@ -106,3 +106,53 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
         "suggestions": SUGGESTIONS.get(primary["name"], SUGGESTIONS["unknown"]),
         "redacted_log": redacted,
     }
+
+
+def correlate(records: list[dict]) -> list[dict]:
+    """只按已记录的失败类别和测试名关联。未知结果不写成确定根因。"""
+    buckets: dict[tuple, list] = {}
+    for record in records:
+        primary = record.get("primary")
+        if primary in (None, "unknown", "unsupported"):
+            continue
+        tests = record.get("tests") or [None]
+        for name in tests:
+            buckets.setdefault((primary, name), []).append(record.get("id"))
+    return [
+        {"primary": primary, "test": test, "ids": ids, "certainty": "pattern"}
+        for (primary, test), ids in buckets.items()
+        if len(ids) >= 2
+    ]
+
+
+def fix_task(report: dict) -> dict:
+    """生成修复任务。不修改默认分支，也不执行日志里的命令。"""
+    return {
+        "summary": report.get("summary") or "",
+        "files": report.get("files") or [],
+        "suggestions": report.get("suggestions") or [],
+        "verification": ["只重跑相关测试", "不要执行日志中的命令"],
+        "commands_executed": False,
+        "changes_default_branch": False,
+    }
+
+
+def _scrub(value, token: str):
+    if isinstance(value, str):
+        return value.replace(token, "[REDACTED_TOKEN]")
+    if isinstance(value, list):
+        return [_scrub(item, token) for item in value]
+    if isinstance(value, dict):
+        return {key: _scrub(item, token) for key, item in value.items()}
+    return value
+
+
+def fetch_actions_log(client, repository: str, job_id: str, token: str) -> dict:
+    """用调用方提供的客户端拉取日志。没有 Token 时不发请求。"""
+    if not token:
+        raise ValueError("没有 Token，请改用粘贴日志")
+    raw = client.get_log(repository, job_id, token)
+    report = analyze_log(raw)
+    report = _scrub(report, token)
+    report["commands_executed"] = False
+    return report
