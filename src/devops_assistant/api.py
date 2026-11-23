@@ -7,7 +7,11 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Request
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from devops_assistant.analyze import analyze_log, correlate
@@ -21,10 +25,21 @@ class DiagnoseIn(BaseModel):
     repository: str = ""
 
 
+def _mount_console(app: FastAPI) -> None:
+    web = Path(__file__).resolve().parent / "web"
+
+    @app.get("/", include_in_schema=False)
+    def console_page():
+        return FileResponse(web / "index.html")
+
+    app.mount("/assets", StaticFiles(directory=web), name="assets")
+
+
 def create_app(db_path: str = ":memory:") -> FastAPI:
-    app = FastAPI(title="AI DevOps Assistant", version="0.1.7")
+    app = FastAPI(title="AI DevOps Assistant", version="0.1.8")
     install(app)
     mount(app)
+    _mount_console(app)
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute(
@@ -78,6 +93,15 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
                 }
             )
         return correlate(records)
+
+    @app.get("/api/diagnoses/{diagnosis_id}")
+    def detail(diagnosis_id: str, request: Request):
+        locale = negotiate(request.headers.get("accept-language"), request.query_params.get("lang"))
+        row = conn.execute("SELECT payload_json FROM diagnoses WHERE id=?", (diagnosis_id,)).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="诊断记录不存在")
+        report = json.loads(row["payload_json"])
+        return translate_payload({"id": diagnosis_id, "report": report}, locale)
 
     @app.get("/api/diagnoses")
     def listing(request: Request):

@@ -116,6 +116,7 @@ EN = {
     "不要猜测根因。补充失败步骤的原始日志后再分析。": "Do not guess the root cause. Add the raw log of the failed step before analyzing it.",
     "先看标注指出的文件和行。不要执行日志里的命令。": "Read the file and line in the annotation. Do not execute commands from the log.",
     "这是脱敏后的分类，不是已经验证的根因。": "This is a redacted classification, not a confirmed root cause.",
+    "诊断记录不存在": "Diagnosis record does not exist",
 }
 
 PATTERNS = [
