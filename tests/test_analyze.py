@@ -43,6 +43,11 @@ def test_gitlab_job_log_is_classified_without_running_commands():
     assert "glpat-abcdefghijklmnopqrst" not in report["redacted_log"]
 
 
+def test_python_traceback_file_is_recorded():
+    report = analyze_log('Traceback (most recent call last):\n  File "src/order/service.py", line 42, in total\nAssertionError\n')
+    assert {"path": "src/order/service.py", "line": 42} in report["files"]
+
+
 def test_jenkins_stays_unsupported():
     report = analyze_log("Build step 'Execute shell' marked build as failure", "jenkins")
     assert report["primary"] == "unsupported"

@@ -27,6 +27,7 @@ SUGGESTIONS = {
 
 COMMAND_RE = re.compile(r"(?im)^(?:\s*)(?:sudo|rm|curl|wget|bash|sh|powershell)\b.*$")
 FILE_RE = re.compile(r"([\w./-]+\.(?:py|java|ts|tsx|js|go|yml|yaml)):(\d+)")
+TRACE_RE = re.compile(r'File "([^"\n]+)", line (\d+)')
 ANNOTATION_RE = re.compile(r"::error(?:\s+file=([^,\s]+),line=(\d+)(?:,[^:]*)?)?::")
 TEST_RE = re.compile(r"(?m)^FAILED\s+([^\s]+)|([\w.]+Test)\.(\w+)")
 RULES = [
@@ -107,6 +108,7 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
         if hits:
             categories.append({"name": name, "severity": severity, "evidence": hits[:3], "certainty": "pattern"})
     files = [{"path": item[0], "line": int(item[1])} for item in FILE_RE.findall(redacted)[:20]]
+    files.extend({"path": path, "line": int(line)} for path, line in TRACE_RE.findall(redacted)[:20])
     for path, line in ANNOTATION_RE.findall(redacted):
         if path and line:
             files.append({"path": path, "line": int(line)})
