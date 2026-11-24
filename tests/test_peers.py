@@ -12,6 +12,10 @@ def test_fingerprint_ignores_time_and_secrets():
     report = analyze_log(first)
     assert report["fingerprint"] == fingerprint(first)
     assert TOKEN not in report["redacted_log"]
+    prefixed = analyze_log("db_password=hunter2 client_secret=abc MY_API_KEY=zzz")
+    assert "hunter2" not in prefixed["redacted_log"]
+    assert "abc" not in prefixed["redacted_log"]
+    assert "zzz" not in prefixed["redacted_log"]
     assert report["commands_executed"] is False
 
 
@@ -21,6 +25,8 @@ def test_annotations_and_fingerprint_groups():
     log = "::error file=src/order/Order.java,line=12::AssertionError\nFAILED tests/OrderTest.testTotal\n"
     report = analyze_log(log)
     assert {"path": "src/order/Order.java", "line": 12} in report["files"]
+    located = analyze_log("::error file=src/app.js,line=10,col=15::boom")
+    assert {"path": "src/app.js", "line": 10} in located["files"]
     assert report["commands_executed"] is False
     groups = correlate([
         {"id": "a", "primary": "test", "tests": ["one"], "fingerprint": "same"},

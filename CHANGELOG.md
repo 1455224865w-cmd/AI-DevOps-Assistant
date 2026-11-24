@@ -1,5 +1,10 @@
 # 变更记录
 
+## 0.1.9
+
+- 镜像地址改为当前 GitHub 账号 `wangcheng-coder`。发布工作流用仓库所有者生成 `ghcr.io/${{ github.repository_owner }}/ai-devops-assistant`。
+- `db_password`、`client_secret` 这类带前缀的赋值会脱敏。带 `col` 的 `::error` 注解仍能提取文件和行。
+
 ## 0.1.8
 
 - 增加统一控制台，并可以打开一条已脱敏的诊断。

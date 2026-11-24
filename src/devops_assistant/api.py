@@ -36,7 +36,7 @@ def _mount_console(app: FastAPI) -> None:
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
-    app = FastAPI(title="AI DevOps Assistant", version="0.1.8")
+    app = FastAPI(title="AI DevOps Assistant", version="0.1.9")
     install(app)
     mount(app)
     _mount_console(app)

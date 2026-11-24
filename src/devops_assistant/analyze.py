@@ -6,7 +6,7 @@ import hashlib
 import re
 
 REDACTIONS = [
-    (re.compile(r"(?i)\b(password|passwd|secret|api[_-]?key|token)\b\s*[:=]\s*\S+"), r"\1=[REDACTED]"),
+    (re.compile(r"(?i)([\w.-]*(?:password|passwd|secret|api[_-]?key|token))\s*[:=]\s*\S+"), r"\1=[REDACTED]"),
     (re.compile(r"ghp_[A-Za-z0-9]{20,}"), "[REDACTED_TOKEN]"),
     (re.compile(r"github_pat_[A-Za-z0-9_]+"), "[REDACTED_TOKEN]"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED_KEY]"),
@@ -26,7 +26,7 @@ SUGGESTIONS = {
 
 COMMAND_RE = re.compile(r"(?im)^(?:\s*)(?:sudo|rm|curl|wget|bash|sh|powershell)\b.*$")
 FILE_RE = re.compile(r"([\w./-]+\.(?:py|java|ts|tsx|js|go|yml|yaml)):(\d+)")
-ANNOTATION_RE = re.compile(r"::error(?:\s+file=([^,\s]+),line=(\d+))?::")
+ANNOTATION_RE = re.compile(r"::error(?:\s+file=([^,\s]+),line=(\d+)(?:,[^:]*)?)?::")
 TEST_RE = re.compile(r"(?m)^FAILED\s+([^\s]+)|([\w.]+Test)\.(\w+)")
 RULES = [
     ("test", "high", [r"There were test failures", r"^FAILED ", r"Tests run:.*Failures: [1-9]", r"AssertionError"]),
