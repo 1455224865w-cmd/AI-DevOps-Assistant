@@ -9,6 +9,7 @@ REDACTIONS = [
     (re.compile(r"(?i)([\w.-]*(?:password|passwd|secret|api[_-]?key|token))\s*[:=]\s*\S+"), r"\1=[REDACTED]"),
     (re.compile(r"ghp_[A-Za-z0-9]{20,}"), "[REDACTED_TOKEN]"),
     (re.compile(r"github_pat_[A-Za-z0-9_]+"), "[REDACTED_TOKEN]"),
+    (re.compile(r"glpat-[A-Za-z0-9\-_]{16,}"), "[REDACTED_TOKEN]"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED_KEY]"),
     (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9\-._~+/]+=*"), "Bearer [REDACTED]"),
 ]
@@ -38,6 +39,10 @@ RULES = [
     ("network", "medium", [r"ECONNREFUSED", r"Could not resolve host", r"Network is unreachable", r"Temporary failure in name resolution"]),
     ("ci-error", "high", [r"##\[error\]", r"(?m)^::error\b"]),
 ]
+GITLAB_RULES = RULES + [
+    ("job-failed", "high", [r"ERROR: Job failed"]),
+]
+SUPPORTED = {"github-actions", "gitlab-ci"}
 
 
 def redact(text: str) -> str:
@@ -75,12 +80,12 @@ def fingerprint(log: str) -> str:
 
 
 def analyze_log(log: str, provider: str = "github-actions") -> dict:
-    if provider != "github-actions":
+    if provider not in SUPPORTED:
         return {
             "provider": provider,
             "primary": "unsupported",
             "certainty": "unknown",
-            "summary": "MVP 只解析 GitHub Actions 日志，避免把其他 CI 的格式误判成同一类原因。",
+            "summary": "当前只解析 GitHub Actions 和 GitLab CI 日志。Jenkins 等其他格式会原样标成未支持，避免误判成同一类原因。",
             "categories": [],
             "files": [],
             "tests": [],
@@ -92,7 +97,8 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
         }
     redacted = redact(_clip(log))
     categories = []
-    for name, severity, patterns in RULES:
+    rules = GITLAB_RULES if provider == "gitlab-ci" else RULES
+    for name, severity, patterns in rules:
         hits = []
         for pattern in patterns:
             match = re.search(pattern, redacted, re.MULTILINE)
@@ -114,7 +120,8 @@ def analyze_log(log: str, provider: str = "github-actions") -> dict:
     commands = [line.strip()[:200] for line in COMMAND_RE.findall(redacted)]
     if categories:
         primary = categories[0]
-        summary = f"日志匹配到 {primary['name']} 失败模式。这是规则命中，不是已经验证的根因。"
+        source = "GitLab CI" if provider == "gitlab-ci" else "GitHub Actions"
+        summary = f"{source} 日志匹配到 {primary['name']} 失败模式。这是规则命中，不是已经验证的根因。"
         certainty = "pattern"
     else:
         primary = {"name": "unknown", "severity": "info", "evidence": [], "certainty": "unknown"}

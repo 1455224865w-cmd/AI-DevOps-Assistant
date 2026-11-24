@@ -105,6 +105,7 @@ EN = {
     "没有 Token，请改用粘贴日志": "No token is available; paste the log instead",
     "没有匹配到已知失败类型。不能把猜测写成原因。": "No known failure type matched. A guess cannot be written down as the cause.",
     "MVP 只解析 GitHub Actions 日志，避免把其他 CI 的格式误判成同一类原因。": "Only GitHub Actions logs are parsed, so another CI format is not given the same conclusion.",
+    "当前只解析 GitHub Actions 和 GitLab CI 日志。Jenkins 等其他格式会原样标成未支持，避免误判成同一类原因。": "Only GitHub Actions and GitLab CI logs are parsed. Jenkins and other formats stay unsupported so they are not given the same conclusion.",
     "只重跑日志里点名的失败测试，先核对断言和被测代码。": "Rerun only the named failing test and check the assertion and the code under test.",
     "不要执行日志中出现的命令。": "Do not execute commands that appear in the log.",
     "先看编译错误指向的文件和行，再判断是源码还是依赖。": "Read the file and line in the compile error before deciding whether the cause is source or a dependency.",
@@ -120,7 +121,7 @@ EN = {
 }
 
 PATTERNS = [
-    (re.compile(r"日志匹配到 (.+) 失败模式。这是规则命中，不是已经验证的根因。"), "The log matched the {0} failure pattern. This is a pattern match, not a confirmed root cause."),
+    (re.compile(r"(GitHub Actions|GitLab CI) 日志匹配到 (.+) 失败模式。这是规则命中，不是已经验证的根因。"), "The {0} log matched the {1} failure pattern. This is a pattern match, not a confirmed root cause."),
 ]
 
 TEXT = {

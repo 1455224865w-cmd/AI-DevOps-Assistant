@@ -13,7 +13,7 @@
 
 ## 限制
 
-- 只解析 GitHub Actions 风格日志。GitLab CI 和 Jenkins 会返回未支持。
+- 解析 GitHub Actions 和 GitLab CI 日志。Jenkins 仍返回未支持。GitLab 令牌 `glpat-` 会脱敏。分析过程不执行日志里的命令。
 - 规则命中不是已经验证的根因。
 - 没有仓库授权，不会主动拉取 Actions 日志。
 

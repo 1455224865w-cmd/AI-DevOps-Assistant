@@ -32,6 +32,22 @@ def test_log_is_redacted_and_commands_are_not_run(monkeypatch):
     assert any(item.startswith("rm -rf") for item in report["untrusted_commands"])
 
 
+def test_gitlab_job_log_is_classified_without_running_commands():
+    report = analyze_log(
+        "Running with gitlab-runner 16.0\nERROR: Job failed: exit status 1\nglpat-abcdefghijklmnopqrst\n",
+        "gitlab-ci",
+    )
+    assert report["provider"] == "gitlab-ci"
+    assert report["primary"] == "job-failed"
+    assert report["commands_executed"] is False
+    assert "glpat-abcdefghijklmnopqrst" not in report["redacted_log"]
+
+
+def test_jenkins_stays_unsupported():
+    report = analyze_log("Build step 'Execute shell' marked build as failure", "jenkins")
+    assert report["primary"] == "unsupported"
+
+
 def test_unknown_log_is_not_guessed():
     report = analyze_log("all checks completed\nno error marker")
     assert report["primary"] == "unknown"
